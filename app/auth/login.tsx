@@ -78,7 +78,7 @@ export default function LoginScreen() {
           const { error: profileError } = await supabase
             .from('profiles')
             .insert({
-              user_id: data.user?.id,
+              user_id: data.user.id,
               name: formData.name.trim(),
               position: 'Meio-campo',
               years_playing: 0,
@@ -95,6 +95,9 @@ export default function LoginScreen() {
 
           if (profileError) {
             console.error('Erro ao criar perfil:', profileError);
+            Alert.alert('Aviso', 'Conta criada, mas houve um problema ao criar o perfil. Você pode completar seu perfil depois.');
+          } else {
+            console.log('Perfil criado com sucesso');
           }
 
           Alert.alert(
