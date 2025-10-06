@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Wallet, CreditCard, ArrowUp, ArrowDown, Plus, Eye, EyeOff, Copy, QrCode, Key } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import { useWallet } from '@/contexts/WalletContext';
-import { PixPaymentResponse } from '@/config/abacatepay';
+import { PixPaymentResponse } from '@/lib/abacatepay';
 import * as Clipboard from 'expo-clipboard';
 
 export default function WalletScreen() {
@@ -370,7 +370,7 @@ export default function WalletScreen() {
             
             {currentPayment?.pix_qr_code && (
               <Image 
-                source={{ uri: `data:image/png;base64,${currentPayment.pix_qr_code}` }}
+                source={{ uri: currentPayment.pix_qr_code }}
                 style={styles.qrCode}
               />
             )}

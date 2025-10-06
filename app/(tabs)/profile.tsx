@@ -44,6 +44,10 @@ export default function ProfileScreen() {
     await cancelSubscription();
   };
 
+  const handleCreatePayment = async () => {
+    await createPaymentLink();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -118,12 +122,12 @@ export default function ProfileScreen() {
             <View style={styles.subscriptionActions}>
               <TouchableOpacity 
                 style={styles.subscribeButton}
-                onPress={() => openPaymentLink()}
+                onPress={handleCreatePayment}
                 disabled={isLoading}
               >
                 <Crown size={20} color="#FFFFFF" />
                 <Text style={styles.subscribeButtonText}>
-                  {isLoading ? 'Abrindo pagamento...' : 'Assinar Premium'}
+                  {isLoading ? 'Gerando pagamento...' : 'Assinar Premium'}
                 </Text>
               </TouchableOpacity>
               <Text style={styles.subscriptionPrice}>R$ 27,90/mês</Text>
@@ -134,12 +138,12 @@ export default function ProfileScreen() {
             <View style={styles.subscriptionActions}>
               <TouchableOpacity 
                 style={styles.subscribeButton}
-                onPress={() => openPaymentLink()}
+                onPress={handleCreatePayment}
                 disabled={isLoading}
               >
                 <Crown size={20} color="#FFFFFF" />
                 <Text style={styles.subscribeButtonText}>
-                  {isLoading ? 'Abrindo pagamento...' : 'Assinar Premium'}
+                  {isLoading ? 'Gerando pagamento...' : 'Assinar Premium'}
                 </Text>
               </TouchableOpacity>
               <Text style={styles.subscriptionPrice}>R$ 27,90/mês</Text>

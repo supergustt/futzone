@@ -1,13 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { Alert } from 'react-native';
-
-interface PixPaymentResponse {
-  id: string;
-  qr_code: string;
-  qr_code_url: string;
-  amount: number;
-  status: string;
-}
+import { abacatePayService, PixPaymentResponse, WithdrawalResponse } from '@/lib/abacatepay';
+import { supabase } from '@/lib/supabase';
 
 export interface Transaction {
   id: string;
@@ -131,14 +125,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     
     try {
-      // Mock payment response for development
-      const payment: PixPaymentResponse = {
-        id: `payment_${Date.now()}`,
-        qr_code: '00020126580014BR.GOV.BCB.PIX0136123e4567-e12b-12d1-a456-426614174000520400005303986540510.005802BR5913FUTZONE LTDA6009SAO PAULO62070503***6304ABCD',
-        qr_code_url: 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=mock_pix_code',
+      // Create payment with AbacatePay
+      const payment = await abacatePayService.createPayment({
         amount,
-        status: 'pending'
-      };
+        description: `Depósito FutZone - R$ ${amount.toFixed(2)}`,
+        payment_type: 'deposit',
+      });
 
       // Add pending transaction
       const transaction: Omit<Transaction, 'id' | 'created_at'> = {
@@ -154,7 +146,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Deposit error:', error);
       if (mountedRef.current) {
-        Alert.alert('Erro', 'Não foi possível criar o depósito. Tente novamente.');
+        Alert.alert('Erro', error instanceof Error ? error.message : 'Não foi possível criar o depósito. Tente novamente.');
       }
       return null;
     } finally {
@@ -191,18 +183,25 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     
     try {
-      // Add withdrawal transaction and update balance
+      // Create withdrawal with AbacatePay
+      const withdrawal = await abacatePayService.createWithdrawal({
+        amount,
+        pix_key: pixKey,
+        description: `Saque FutZone - R$ ${amount.toFixed(2)}`,
+      });
+
+      // Add withdrawal transaction
       const transaction: Omit<Transaction, 'id' | 'created_at'> = {
         type: 'withdrawal',
         amount: -amount,
         description: `Saque via PIX - R$ ${amount.toFixed(2)}`,
-        status: 'pending',
+        status: 'completed', // AbacatePay handles it immediately
         pix_key: pixKey,
       };
 
       addTransaction(transaction);
       
-      // Update balance immediately for withdrawal
+      // Balance is already updated by the AbacatePay function
       const newBalance = balance - amount;
       const newTransactions = [...transactions, {
         ...transaction,
@@ -215,7 +214,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Withdrawal error:', error);
       if (mountedRef.current) {
-        Alert.alert('Erro', 'Não foi possível processar o saque. Tente novamente.');
+        Alert.alert('Erro', error instanceof Error ? error.message : 'Não foi possível processar o saque. Tente novamente.');
       }
       return false;
     } finally {
@@ -249,8 +248,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (!mountedRef.current) return;
     
     try {
-      // Mock payment status check
-      const payment = { status: 'paid' };
+      // Get payment status from database (updated by webhook)
+      const { data: payment, error } = await supabase
+        .from('abacatepay_payments')
+        .select('status, amount')
+        .eq('payment_id', paymentId)
+        .single();
+
+      if (error) {
+        console.error('Error checking payment status:', error);
+        return;
+      }
       
       if (payment.status === 'paid') {
         // Find and update the transaction
@@ -264,10 +272,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         // Find the transaction amount to add to balance
         const transaction = transactions.find(t => t.payment_id === paymentId);
         if (transaction && transaction.status === 'pending') {
-          const newBalance = balance + transaction.amount;
+          const newBalance = balance + payment.amount;
           saveWalletData(newBalance, updatedTransactions);
           if (mountedRef.current) {
-            Alert.alert('Sucesso!', `Depósito de R$ ${transaction.amount.toFixed(2)} confirmado!`);
+            Alert.alert('Sucesso!', `Depósito de R$ ${payment.amount.toFixed(2)} confirmado!`);
           }
         }
       }
