@@ -74,35 +74,41 @@ export default function LoginScreen() {
         }
 
         if (data.user) {
-          // Criar perfil do usuário
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              user_id: data.user.id,
-              name: formData.name.trim(),
-              position: 'Meio-campo',
-              years_playing: 0,
-              rating: 0.0,
-              rating_count: 0,
-              games_played: 0,
-              goals: 0,
-              assists: 0,
-              wins: 0,
-              rank: 'C',
-              experience_points: 0,
-              level: 'Iniciante',
-            });
+          // Aguardar um pouco para garantir que a sessão esteja estabelecida
+          setTimeout(async () => {
+            try {
+              // Criar perfil do usuário após a sessão estar estabelecida
+              const { error: profileError } = await supabase
+                .from('profiles')
+                .insert({
+                  user_id: data.user.id,
+                  name: formData.name.trim(),
+                  position: 'Meio-campo',
+                  years_playing: 0,
+                  rating: 0.0,
+                  rating_count: 0,
+                  games_played: 0,
+                  goals: 0,
+                  assists: 0,
+                  wins: 0,
+                  rank: 'C',
+                  experience_points: 0,
+                  level: 'Iniciante',
+                });
 
-          if (profileError) {
-            console.error('Erro ao criar perfil:', profileError);
-            Alert.alert('Aviso', 'Conta criada, mas houve um problema ao criar o perfil. Você pode completar seu perfil depois.');
-          } else {
-            console.log('Perfil criado com sucesso');
-          }
+              if (profileError) {
+                console.error('Erro ao criar perfil:', profileError);
+              } else {
+                console.log('Perfil criado com sucesso');
+              }
+            } catch (error) {
+              console.error('Erro ao criar perfil:', error);
+            }
+          }, 1000);
 
           Alert.alert(
             'Cadastro Realizado!', 
-            'Sua conta foi criada com sucesso. Você já pode usar o app!',
+            'Sua conta foi criada com sucesso!',
             [{ text: 'OK', onPress: () => router.replace('/(tabs)') }]
           );
         }
