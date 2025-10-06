@@ -78,7 +78,7 @@ export default function LoginScreen() {
           const { error: profileError } = await supabase
             .from('profiles')
             .insert({
-              user_id: data.user.id,
+              user_id: data.user?.id,
               name: formData.name.trim(),
               position: 'Meio-campo',
               years_playing: 0,
