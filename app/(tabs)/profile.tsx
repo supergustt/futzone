@@ -1,10 +1,13 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Star, Trophy, Target, Users, Settings, Award, TrendingUp, Crown, Calendar, CheckCircle, XCircle } from 'lucide-react-native';
+import { Star, Trophy, Target, Users, Settings, Award, TrendingUp, Crown, Calendar, CheckCircle, XCircle, LogIn, LogOut } from 'lucide-react-native';
 import { calculatePlayerRanking, getRankColor, getRankDescription } from '@/utils/ranking';
 import { router } from 'expo-router';
 import { useProfile } from '@/contexts/ProfileContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
+import { Alert } from 'react-native';
 
 const achievements = [
   { id: 1, title: 'Artilheiro', description: '10 gols em um mês', icon: '⚽', unlocked: true },
@@ -16,6 +19,25 @@ const achievements = [
 export default function ProfileScreen() {
   const { profileData } = useProfile();
   const { subscriptionData, isLoading, createSubscription, cancelSubscription, createPaymentLink } = useSubscription();
+  const [user, setUser] = useState<any>(null);
+  const [isLogoutLoading, setIsLogoutLoading] = useState(false);
+
+  useEffect(() => {
+    // Get current user
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+
+    getCurrentUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
   
   const playerStats = {
     wins: profileData.wins,
@@ -48,6 +70,74 @@ export default function ProfileScreen() {
     await createPaymentLink();
   };
 
+  const handleLogin = () => {
+    router.push('/auth/login');
+  };
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Confirmar Logout',
+      'Tem certeza que deseja sair da sua conta?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Sair', 
+          style: 'destructive',
+          onPress: async () => {
+            setIsLogoutLoading(true);
+            try {
+              const { error } = await supabase.auth.signOut();
+              if (error) {
+                Alert.alert('Erro', 'Não foi possível fazer logout. Tente novamente.');
+              } else {
+                Alert.alert('Logout realizado', 'Você foi desconectado com sucesso.');
+              }
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Erro', 'Ocorreu um erro inesperado.');
+            } finally {
+              setIsLogoutLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // If user is not authenticated, show login prompt
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <View style={styles.profileInfo}>
+              <View style={styles.defaultAvatar}>
+                <Users size={40} color="#9CA3AF" />
+              </View>
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>Visitante</Text>
+                <Text style={styles.position}>Faça login para acessar seu perfil</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.loginPrompt}>
+            <LogIn size={48} color="#22C55E" />
+            <Text style={styles.loginPromptTitle}>Entre na sua conta</Text>
+            <Text style={styles.loginPromptText}>
+              Faça login para acessar seu perfil, estatísticas, assinatura e muito mais!
+            </Text>
+            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+              <LogIn size={20} color="#FFFFFF" />
+              <Text style={styles.loginButtonText}>Fazer Login</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.bottomPadding} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -72,9 +162,10 @@ export default function ProfileScreen() {
           
           <TouchableOpacity 
             style={styles.settingsButton}
-            onPress={() => router.push('/edit-profile')}
+            onPress={handleLogout}
+            disabled={isLogoutLoading}
           >
-            <Settings size={24} color="#6B7280" />
+            <LogOut size={24} color="#EF4444" />
           </TouchableOpacity>
         </View>
 
@@ -277,6 +368,17 @@ export default function ProfileScreen() {
           onPress={() => router.push('/edit-profile')}
         >
           <Text style={styles.editProfileText}>Editar Perfil</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.logoutButton}
+          onPress={handleLogout}
+          disabled={isLogoutLoading}
+        >
+          <LogOut size={20} color="#EF4444" />
+          <Text style={styles.logoutButtonText}>
+            {isLogoutLoading ? 'Saindo...' : 'Sair da Conta'}
+          </Text>
         </TouchableOpacity>
 
         <View style={styles.bottomPadding} />
@@ -693,6 +795,75 @@ const styles = StyleSheet.create({
   },
   editProfileText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  defaultAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  loginPrompt: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 24,
+    borderRadius: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  loginPromptTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  loginPromptText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  loginButton: {
+    backgroundColor: '#22C55E',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    gap: 8,
+  },
+  loginButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  logoutButton: {
+    marginHorizontal: 24,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#EF4444',
+    gap: 8,
+    marginTop: 16,
+  },
+  logoutButtonText: {
+    color: '#EF4444',
     fontSize: 16,
     fontWeight: '700',
   },
