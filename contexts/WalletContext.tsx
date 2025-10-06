@@ -113,6 +113,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   const createDeposit = async (amount: number): Promise<PixPaymentResponse | null> => {
+    // Check if user is authenticated before creating deposit
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      if (mountedRef.current) {
+        Alert.alert('Erro', 'Você precisa fazer login para realizar depósitos');
+      }
+      return null;
+    }
+
     if (amount < 1) {
       if (mountedRef.current) {
         Alert.alert('Erro', 'Valor mínimo para depósito é R$ 1,00');
