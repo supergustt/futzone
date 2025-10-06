@@ -74,37 +74,23 @@ export default function LoginScreen() {
         }
 
         if (data.user) {
-          // Aguardar um pouco para garantir que a sessão esteja estabelecida
-          setTimeout(async () => {
-            try {
-              // Criar perfil do usuário após a sessão estar estabelecida
-              const { error: profileError } = await supabase
-                .from('profiles')
-                .insert({
-                  user_id: data.user.id,
-                  name: formData.name.trim(),
-                  position: 'Meio-campo',
-                  years_playing: 0,
-                  rating: 0.0,
-                  rating_count: 0,
-                  games_played: 0,
-                  goals: 0,
-                  assists: 0,
-                  wins: 0,
-                  rank: 'C',
-                  experience_points: 0,
-                  level: 'Iniciante',
-                });
+          // Criar perfil usando edge function (service role)
+          try {
+            const { data: profileData, error: profileError } = await supabase.functions.invoke('create-profile', {
+              body: {
+                user_id: data.user.id,
+                name: formData.name.trim(),
+              },
+            });
 
-              if (profileError) {
-                console.error('Erro ao criar perfil:', profileError);
-              } else {
-                console.log('Perfil criado com sucesso');
-              }
-            } catch (error) {
-              console.error('Erro ao criar perfil:', error);
+            if (profileError) {
+              console.error('Erro ao criar perfil:', profileError);
+            } else {
+              console.log('Perfil criado com sucesso:', profileData);
             }
-          }, 1000);
+          } catch (error) {
+            console.error('Erro ao criar perfil:', error);
+          }
 
           Alert.alert(
             'Cadastro Realizado!', 
