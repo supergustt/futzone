@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useRef } from 'react';
 import { Alert } from 'react-native';
 import { abacatePayService, SubscriptionData as AbacatePaySubscriptionData } from '@/lib/abacatepay';
+import { supabase } from '@/lib/supabase';
 
 export interface SubscriptionData {
   isActive: boolean;
@@ -41,17 +42,65 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshSubscription();
     
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        refreshSubscription();
+      } else if (event === 'SIGNED_OUT') {
+        // Reset to default state when user signs out
+        if (mountedRef.current) {
+          setSubscriptionData({
+            isActive: false,
+            plan: 'free',
+            trialEndsAt: null,
+            subscriptionEndsAt: null,
+            isTrialActive: false,
+            daysLeftInTrial: 0,
+          });
+        }
+      }
+    });
+
     return () => {
       mountedRef.current = false;
+      subscription.unsubscribe();
     };
   }, []);
 
   const refreshSubscription = async () => {
     try {
+      // Check if user is authenticated before making API call
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // User not authenticated, set to default free state
+        if (mountedRef.current) {
+          setSubscriptionData({
+            isActive: false,
+            plan: 'free',
+            trialEndsAt: null,
+            subscriptionEndsAt: null,
+            isTrialActive: false,
+            daysLeftInTrial: 0,
+          });
+        }
+        return;
+      }
+
       const abacatePayData = await abacatePayService.getSubscriptionStatus();
       updateSubscriptionFromAbacatePay(abacatePayData);
     } catch (error) {
       console.error('Error refreshing subscription:', error);
+      // On error, set to default free state
+      if (mountedRef.current) {
+        setSubscriptionData({
+          isActive: false,
+          plan: 'free',
+          trialEndsAt: null,
+          subscriptionEndsAt: null,
+          isTrialActive: false,
+          daysLeftInTrial: 0,
+        });
+      }
     }
   };
 
