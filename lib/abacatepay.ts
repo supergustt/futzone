@@ -42,17 +42,19 @@ export interface SubscriptionData {
 }
 
 class AbacatePayService {
-  private getAuthHeaders() {
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${supabase.auth.session()?.access_token}`,
-    };
-  }
-
   async createPayment(paymentData: PaymentRequest): Promise<PixPaymentResponse> {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+
       const { data, error } = await supabase.functions.invoke('abacatepay-payment', {
         body: paymentData,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) {
@@ -69,8 +71,17 @@ class AbacatePayService {
 
   async createWithdrawal(withdrawalData: WithdrawalRequest): Promise<WithdrawalResponse> {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+
       const { data, error } = await supabase.functions.invoke('abacatepay-withdrawal', {
         body: withdrawalData,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) {
@@ -87,8 +98,17 @@ class AbacatePayService {
 
   async createSubscription(planId: string = 'premium'): Promise<SubscriptionData> {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+
       const { data, error } = await supabase.functions.invoke('abacatepay-subscription', {
         body: { action: 'create', plan_id: planId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) {
@@ -105,8 +125,17 @@ class AbacatePayService {
 
   async cancelSubscription(): Promise<{ status: string; message: string }> {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+
       const { data, error } = await supabase.functions.invoke('abacatepay-subscription', {
         body: { action: 'cancel' },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) {
@@ -123,8 +152,17 @@ class AbacatePayService {
 
   async getSubscriptionStatus(): Promise<SubscriptionData> {
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('User not authenticated');
+      }
+
       const { data, error } = await supabase.functions.invoke('abacatepay-subscription', {
         body: { action: 'status' },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) {

@@ -125,6 +125,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     
     try {
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Usuário não autenticado');
+      }
+
       // Create payment with AbacatePay
       const payment = await abacatePayService.createPayment({
         amount,
@@ -146,7 +152,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Deposit error:', error);
       if (mountedRef.current) {
-        Alert.alert('Erro', error instanceof Error ? error.message : 'Não foi possível criar o depósito. Tente novamente.');
+        const errorMessage = error instanceof Error ? error.message : 'Não foi possível criar o depósito. Tente novamente.';
+        Alert.alert('Erro', errorMessage);
       }
       return null;
     } finally {

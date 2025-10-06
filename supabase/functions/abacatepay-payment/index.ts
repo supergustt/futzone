@@ -32,9 +32,9 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method !== 'POST') {
-      return new Response('Method not allowed', {
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
-        headers: corsHeaders,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -56,11 +56,19 @@ Deno.serve(async (req: Request) => {
     }
 
     // Get user from auth token
-    const authHeader = req.headers.get('Authorization')!;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: getUserError } = await supabase.auth.getUser(token);
 
     if (getUserError || !user) {
+      console.error('Auth error:', getUserError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -115,6 +123,8 @@ Deno.serve(async (req: Request) => {
       external_id: external_id || `${payment_type}_${user.id}_${Date.now()}`,
     };
 
+    console.log('Creating payment with AbacatePay:', paymentData);
+
     const abacatePayResponse = await fetch(`${ABACATEPAY_BASE_URL}/billing/pix`, {
       method: 'POST',
       headers: {
@@ -127,13 +137,14 @@ Deno.serve(async (req: Request) => {
     if (!abacatePayResponse.ok) {
       const errorText = await abacatePayResponse.text();
       console.error('AbacatePay API error:', errorText);
-      return new Response(JSON.stringify({ error: 'Payment creation failed' }), {
+      return new Response(JSON.stringify({ error: 'Payment creation failed', details: errorText }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const paymentResponse = await abacatePayResponse.json();
+    console.log('AbacatePay response:', paymentResponse);
 
     // Store payment in database
     const { error: paymentError } = await supabase
@@ -175,7 +186,7 @@ Deno.serve(async (req: Request) => {
 
   } catch (error: any) {
     console.error('Payment creation error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message || 'Internal server error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
