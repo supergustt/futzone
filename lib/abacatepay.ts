@@ -44,27 +44,16 @@ export interface SubscriptionData {
 class AbacatePayService {
   async createPayment(paymentData: PaymentRequest): Promise<PixPaymentResponse> {
     try {
-      // Check authentication first
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        // Try to get user from current session
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          throw new Error('Usuário não autenticado. Faça login para continuar.');
-        }
-        
-        // Get fresh session
-        const { data: { session: newSession } } = await supabase.auth.getSession();
-        if (!newSession) {
-          throw new Error('Sessão expirada. Faça login novamente.');
-        }
+        throw new Error('Usuário não autenticado. Faça login para continuar.');
       }
 
       const { data, error } = await supabase.functions.invoke('abacatepay-payment', {
         body: paymentData,
         headers: {
-          Authorization: `Bearer ${session?.access_token}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
       });
 
@@ -85,7 +74,7 @@ class AbacatePayService {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        throw new Error('User not authenticated');
+        throw new Error('Usuário não autenticado. Faça login para continuar.');
       }
 
       const { data, error } = await supabase.functions.invoke('abacatepay-withdrawal', {
@@ -112,7 +101,7 @@ class AbacatePayService {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        throw new Error('User not authenticated');
+        throw new Error('Usuário não autenticado. Faça login para continuar.');
       }
 
       const { data, error } = await supabase.functions.invoke('abacatepay-subscription', {
@@ -139,7 +128,7 @@ class AbacatePayService {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        throw new Error('User not authenticated');
+        throw new Error('Usuário não autenticado. Faça login para continuar.');
       }
 
       const { data, error } = await supabase.functions.invoke('abacatepay-subscription', {
@@ -166,7 +155,7 @@ class AbacatePayService {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        throw new Error('User not authenticated');
+        throw new Error('Usuário não autenticado. Faça login para continuar.');
       }
 
       const { data, error } = await supabase.functions.invoke('abacatepay-subscription', {
