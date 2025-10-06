@@ -125,12 +125,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     
     try {
-      // Check if user is authenticated
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Usuário não autenticado');
-      }
-
       // Create payment with AbacatePay
       const payment = await abacatePayService.createPayment({
         amount,

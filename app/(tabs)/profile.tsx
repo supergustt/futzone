@@ -15,7 +15,7 @@ const achievements = [
 
 export default function ProfileScreen() {
   const { profileData } = useProfile();
-  const { subscriptionData, isLoading, createSubscription, cancelSubscription, openPaymentLink } = useSubscription();
+  const { subscriptionData, isLoading, createSubscription, cancelSubscription, createPaymentLink } = useSubscription();
   
   const playerStats = {
     wins: profileData.wins,
